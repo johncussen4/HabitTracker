@@ -1,7 +1,7 @@
 import { and, eq } from 'drizzle-orm';
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Alert, FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, FlatList, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { db } from '../../db/client';
 import { categories, habitLogs, habits } from '../../db/schema';
 
@@ -17,6 +17,10 @@ type Habit = {
 
 export default function HabitsScreen() {
   const [habitList, setHabitList] = useState<Habit[]>([]);
+  const [filtered, setFiltered] = useState<Habit[]>([]);
+  const [search, setSearch] = useState('');
+  const [categoryList, setCategoryList] = useState<{ id: number; name: string }[]>([]);
+  const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
   const today = new Date().toISOString().split('T')[0];
 
   const loadHabits = async () => {
@@ -38,22 +42,31 @@ export default function HabitsScreen() {
     }));
 
     setHabitList(habitsWithLogs);
+    setFiltered(habitsWithLogs);
+
+    const cats = await db.select({ id: categories.id, name: categories.name }).from(categories);
+    setCategoryList(cats);
   };
 
   useEffect(() => { loadHabits(); }, []);
+
+  useEffect(() => {
+    let results = habitList;
+    if (search) {
+      results = results.filter(h => h.name.toLowerCase().includes(search.toLowerCase()));
+    }
+    if (selectedCategory) {
+      results = results.filter(h => h.categoryId === selectedCategory);
+    }
+    setFiltered(results);
+  }, [search, selectedCategory, habitList]);
 
   const logToday = async (habitId: number, alreadyLogged: boolean) => {
     if (alreadyLogged) {
       Alert.alert('Already logged', 'You have already logged this habit today!');
       return;
     }
-    await db.insert(habitLogs).values({
-      habitId,
-      date: today,
-      count: 1,
-      completed: 1,
-      notes: null,
-    });
+    await db.insert(habitLogs).values({ habitId, date: today, count: 1, completed: 1, notes: null });
     loadHabits();
   };
 
@@ -69,8 +82,29 @@ export default function HabitsScreen() {
 
   return (
     <View style={styles.container}>
+      <TextInput
+        style={styles.searchBar}
+        placeholder="🔍 Search habits..."
+        value={search}
+        onChangeText={setSearch}
+      />
+      <View style={styles.filterRow}>
+        <TouchableOpacity
+          style={[styles.filterBtn, !selectedCategory && styles.filterActive]}
+          onPress={() => setSelectedCategory(null)}>
+          <Text style={[styles.filterText, !selectedCategory && styles.filterTextActive]}>All</Text>
+        </TouchableOpacity>
+        {categoryList.map(cat => (
+          <TouchableOpacity
+            key={cat.id}
+            style={[styles.filterBtn, selectedCategory === cat.id && styles.filterActive]}
+            onPress={() => setSelectedCategory(selectedCategory === cat.id ? null : cat.id)}>
+            <Text style={[styles.filterText, selectedCategory === cat.id && styles.filterTextActive]}>{cat.name}</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
       <FlatList
-        data={habitList}
+        data={filtered}
         keyExtractor={(item) => item.id.toString()}
         renderItem={({ item }) => (
           <View style={styles.card}>
@@ -95,7 +129,7 @@ export default function HabitsScreen() {
             </View>
           </View>
         )}
-        ListEmptyComponent={<Text style={styles.empty}>No habits yet. Add one!</Text>}
+        ListEmptyComponent={<Text style={styles.empty}>No habits found.</Text>}
       />
       <TouchableOpacity style={styles.fab} onPress={() => router.push('/add-habit')}>
         <Text style={styles.fabText}>+ Add Habit</Text>
@@ -106,6 +140,12 @@ export default function HabitsScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f0f4f8' },
+  searchBar: { backgroundColor: '#fff', margin: 8, borderRadius: 12, padding: 12, fontSize: 16, borderWidth: 1, borderColor: '#ddd' },
+  filterRow: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 8, gap: 6, marginBottom: 4 },
+  filterBtn: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, borderWidth: 1, borderColor: '#ddd', backgroundColor: '#fff' },
+  filterActive: { backgroundColor: '#2d6a4f', borderColor: '#2d6a4f' },
+  filterText: { fontSize: 12, color: '#333' },
+  filterTextActive: { color: '#fff' },
   card: { flexDirection: 'row', backgroundColor: '#fff', margin: 8, borderRadius: 12, overflow: 'hidden', elevation: 2 },
   colourBar: { width: 6 },
   info: { flex: 1, padding: 12 },
