@@ -1,10 +1,17 @@
-import { eq } from 'drizzle-orm';
+import { and, eq, gte } from 'drizzle-orm';
 import { useEffect, useState } from 'react';
 import { Alert, FlatList, Modal, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { db } from '../../db/client';
-import { habits, targets } from '../../db/schema';
+import { habitLogs, habits, targets } from '../../db/schema';
 
-type Target = { id: number; habitId: number; habitName: string; goalCount: number; period: string };
+type Target = { 
+  id: number; 
+  habitId: number; 
+  habitName: string; 
+  goalCount: number; 
+  period: string;
+  progress: number;
+};
 
 export default function TargetsScreen() {
   const [targetList, setTargetList] = useState<Target[]>([]);
@@ -13,7 +20,6 @@ export default function TargetsScreen() {
   const [selectedHabit, setSelectedHabit] = useState<number | null>(null);
   const [goalCount, setGoalCount] = useState('');
   const [period, setPeriod] = useState<'weekly' | 'monthly'>('weekly');
-  const [editingId, setEditingId] = useState<number | null>(null);
 
   const load = async () => {
     const result = await db.select({
@@ -23,25 +29,37 @@ export default function TargetsScreen() {
       goalCount: targets.goalCount,
       period: targets.period,
     }).from(targets).leftJoin(habits, eq(targets.habitId, habits.id));
-    setTargetList(result as Target[]);
+
+    const today = new Date();
+    const targetsWithProgress = await Promise.all(result.map(async (target) => {
+      let startDate = new Date();
+      if (target.period === 'weekly') {
+        startDate.setDate(today.getDate() - today.getDay());
+      } else {
+        startDate.setDate(1);
+      }
+      const startStr = startDate.toISOString().split('T')[0];
+      const logs = await db.select().from(habitLogs)
+        .where(and(eq(habitLogs.habitId, target.habitId), eq(habitLogs.completed, 1), gte(habitLogs.date, startStr)));
+      return { ...target, progress: logs.length } as Target;
+    }));
+
+    setTargetList(targetsWithProgress);
     const h = await db.select({ id: habits.id, name: habits.name }).from(habits);
     setHabitList(h);
   };
 
   useEffect(() => { load(); }, []);
 
-  const openAdd = () => {
-    setSelectedHabit(null); setGoalCount(''); setPeriod('weekly'); setEditingId(null);
-    setModalVisible(true);
-  };
-
   const save = async () => {
     if (!selectedHabit || !goalCount) { Alert.alert('Error', 'Fill in all fields'); return; }
-    if (editingId) {
-      await db.update(targets).set({ goalCount: parseInt(goalCount), period }).where(eq(targets.id, editingId));
-    } else {
-      await db.insert(targets).values({ habitId: selectedHabit, userId: 1, goalCount: parseInt(goalCount), period, createdAt: new Date().toISOString() });
-    }
+    await db.insert(targets).values({ 
+      habitId: selectedHabit, 
+      userId: 1, 
+      goalCount: parseInt(goalCount), 
+      period, 
+      createdAt: new Date().toISOString() 
+    });
     setModalVisible(false);
     load();
   };
@@ -56,25 +74,48 @@ export default function TargetsScreen() {
     ]);
   };
 
+  const getStatus = (progress: number, goal: number) => {
+    if (progress >= goal) return { label: '✅ Achieved!', colour: '#2d6a4f' };
+    if (progress >= goal * 0.7) return { label: '🔥 On track', colour: '#f4a261' };
+    return { label: '⚠️ Behind', colour: '#e63946' };
+  };
+
   return (
     <View style={styles.container}>
       <FlatList
         data={targetList}
         keyExtractor={(item) => item.id.toString()}
-        renderItem={({ item }) => (
-          <View style={styles.card}>
-            <View style={styles.info}>
-              <Text style={styles.habitName}>{item.habitName}</Text>
+        renderItem={({ item }) => {
+          const rate = Math.min(item.progress / item.goalCount, 1);
+          const status = getStatus(item.progress, item.goalCount);
+          return (
+            <View style={styles.card}>
+              <View style={styles.cardHeader}>
+                <Text style={styles.habitName}>{item.habitName}</Text>
+                <TouchableOpacity onPress={() => deleteTarget(item.id)}>
+                  <Text style={styles.btn}>🗑️</Text>
+                </TouchableOpacity>
+              </View>
               <Text style={styles.goal}>🎯 {item.goalCount} times {item.period}</Text>
+              <View style={styles.barBg}>
+                <View style={[styles.barFill, { width: `${rate * 100}%` as any, backgroundColor: status.colour }]} />
+              </View>
+              <View style={styles.progressRow}>
+                <Text style={styles.progressText}>{item.progress} / {item.goalCount} completed</Text>
+                <Text style={[styles.statusLabel, { color: status.colour }]}>{status.label}</Text>
+              </View>
+              <Text style={styles.remaining}>
+                {item.progress >= item.goalCount ? 'Target met!' : `${item.goalCount - item.progress} more to go`}
+              </Text>
             </View>
-            <TouchableOpacity onPress={() => deleteTarget(item.id)}>
-              <Text style={styles.btn}>🗑️</Text>
-            </TouchableOpacity>
-          </View>
-        )}
+          );
+        }}
         ListEmptyComponent={<Text style={styles.empty}>No targets yet.</Text>}
       />
-      <TouchableOpacity style={styles.fab} onPress={openAdd}>
+      <TouchableOpacity style={styles.fab} onPress={() => {
+        setSelectedHabit(null); setGoalCount(''); setPeriod('weekly');
+        setModalVisible(true);
+      }}>
         <Text style={styles.fabText}>+ Add Target</Text>
       </TouchableOpacity>
 
@@ -115,10 +156,16 @@ export default function TargetsScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f0f4f8' },
-  card: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', margin: 8, borderRadius: 12, padding: 16, elevation: 2 },
-  info: { flex: 1 },
+  card: { backgroundColor: '#fff', margin: 8, borderRadius: 12, padding: 16, elevation: 2 },
+  cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   habitName: { fontSize: 16, fontWeight: 'bold', color: '#333' },
-  goal: { fontSize: 14, color: '#666', marginTop: 4 },
+  goal: { fontSize: 14, color: '#666', marginTop: 4, marginBottom: 8 },
+  barBg: { height: 12, backgroundColor: '#f0f0f0', borderRadius: 6, overflow: 'hidden', marginBottom: 6 },
+  barFill: { height: 12, borderRadius: 6 },
+  progressRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  progressText: { fontSize: 12, color: '#666' },
+  statusLabel: { fontSize: 12, fontWeight: 'bold' },
+  remaining: { fontSize: 12, color: '#999', marginTop: 4 },
   btn: { fontSize: 20 },
   empty: { textAlign: 'center', marginTop: 40, color: '#999' },
   fab: { backgroundColor: '#2d6a4f', margin: 16, padding: 16, borderRadius: 12, alignItems: 'center' },

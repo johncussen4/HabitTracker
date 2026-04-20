@@ -1,10 +1,8 @@
 import { eq } from 'drizzle-orm';
 import { useEffect, useState } from 'react';
-import { Dimensions, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { db } from '../../db/client';
 import { categories, habitLogs, habits } from '../../db/schema';
-
-const screenWidth = Dimensions.get('window').width;
 
 export default function InsightsScreen() {
   const [stats, setStats] = useState<{ name: string; colour: string; completed: number; total: number }[]>([]);
@@ -31,7 +29,6 @@ export default function InsightsScreen() {
     setStats(results);
     setTotalCompleted(overall);
 
-    // Calculate streak
     const allLogs = await db.select().from(habitLogs).where(eq(habitLogs.completed, 1));
     const dates = [...new Set(allLogs.map(l => l.date))].sort().reverse();
     let s = 0;
