@@ -1,35 +1,30 @@
-import { Tabs } from 'expo-router';
-import React from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Tabs, router } from 'expo-router';
+import { Text, TouchableOpacity } from 'react-native';
 
-import { HapticTab } from '@/components/haptic-tab';
-import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Colors } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
+const handleLogout = async () => {
+  await AsyncStorage.removeItem('userId');
+  router.replace('/login');
+};
 
 export default function TabLayout() {
-  const colorScheme = useColorScheme();
-
   return (
-    <Tabs
-      screenOptions={{
-        tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
-        headerShown: false,
-        tabBarButton: HapticTab,
-      }}>
-      <Tabs.Screen
-        name="index"
-        options={{
-          title: 'Home',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="house.fill" color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="explore"
-        options={{
-          title: 'Explore',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="paperplane.fill" color={color} />,
-        }}
-      />
+    <Tabs screenOptions={{
+      tabBarActiveTintColor: '#2d6a4f',
+      tabBarInactiveTintColor: '#999',
+      tabBarStyle: { backgroundColor: '#fff' },
+      headerStyle: { backgroundColor: '#2d6a4f' },
+      headerTintColor: '#fff',
+      headerRight: () => (
+        <TouchableOpacity onPress={handleLogout} style={{ marginRight: 16 }}>
+          <Text style={{ color: '#fff', fontSize: 14, fontWeight: 'bold' }}>Logout</Text>
+        </TouchableOpacity>
+      ),
+    }}>
+      <Tabs.Screen name="habits" options={{ title: 'Habits', tabBarLabel: 'Habits' }} />
+      <Tabs.Screen name="categories" options={{ title: 'Categories', tabBarLabel: 'Categories' }} />
+      <Tabs.Screen name="targets" options={{ title: 'Targets', tabBarLabel: 'Targets' }} />
+      <Tabs.Screen name="insights" options={{ title: 'Insights', tabBarLabel: 'Insights' }} />
     </Tabs>
   );
 }
