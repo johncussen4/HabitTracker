@@ -120,11 +120,11 @@ export default function HabitsScreen() {
               </TouchableOpacity>
             </View>
             <View style={styles.actions}>
-              <TouchableOpacity onPress={() => router.push(`/edit-habit?id=${item.id}`)}>
-                <Text style={styles.edit}>✏️</Text>
+              <TouchableOpacity style={styles.editBtn} onPress={() => router.push(`/edit-habit?id=${item.id}`)}>
+                <Text style={styles.editBtnText}>Edit</Text>
               </TouchableOpacity>
-              <TouchableOpacity onPress={() => deleteHabit(item.id)}>
-                <Text style={styles.delete}>🗑️</Text>
+              <TouchableOpacity style={styles.deleteBtn} onPress={() => deleteHabit(item.id)}>
+                <Text style={styles.deleteBtnText}>Delete</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -156,8 +156,10 @@ const styles = StyleSheet.create({
   loggedBtn: { backgroundColor: '#95d5b2' },
   logBtnText: { color: '#fff', fontSize: 12, fontWeight: 'bold' },
   actions: { justifyContent: 'center', padding: 12, gap: 8 },
-  edit: { fontSize: 20 },
-  delete: { fontSize: 20 },
+  editBtn: { backgroundColor: '#45B7D1', borderRadius: 6, padding: 6, marginBottom: 4, alignItems: 'center' },
+  editBtnText: { color: '#fff', fontSize: 11, fontWeight: 'bold' },
+  deleteBtn: { backgroundColor: '#ff6b6b', borderRadius: 6, padding: 6, alignItems: 'center' },
+  deleteBtnText: { color: '#fff', fontSize: 11, fontWeight: 'bold' },
   empty: { textAlign: 'center', marginTop: 40, color: '#999', fontSize: 16 },
   fab: { backgroundColor: '#2d6a4f', margin: 16, padding: 16, borderRadius: 12, alignItems: 'center' },
   fabText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },

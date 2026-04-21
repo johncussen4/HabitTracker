@@ -66,8 +66,12 @@ export default function CategoriesScreen() {
               <Text style={styles.icon}>{item.icon}</Text>
             </View>
             <Text style={styles.name}>{item.name}</Text>
-            <TouchableOpacity onPress={() => openEdit(item)}><Text style={styles.btn}>✏️</Text></TouchableOpacity>
-            <TouchableOpacity onPress={() => deleteCategory(item.id)}><Text style={styles.btn}>🗑️</Text></TouchableOpacity>
+            <TouchableOpacity style={styles.editBtn} onPress={() => openEdit(cat)}>
+              <Text style={styles.editBtnText}>Edit</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.deleteBtn} onPress={() => deleteCategory(cat.id)}>
+              <Text style={styles.deleteBtnText}>Delete</Text>
+            </TouchableOpacity>
           </View>
         )}
         ListEmptyComponent={<Text style={styles.empty}>No categories yet.</Text>}
@@ -116,7 +120,10 @@ const styles = StyleSheet.create({
   iconBox: { width: 44, height: 44, borderRadius: 22, justifyContent: 'center', alignItems: 'center' },
   icon: { fontSize: 22 },
   name: { flex: 1, fontSize: 16, fontWeight: 'bold', color: '#333' },
-  btn: { fontSize: 20, marginLeft: 8 },
+  editBtn: { backgroundColor: '#45B7D1', borderRadius: 6, padding: 6, marginLeft: 6, alignItems: 'center' },
+  editBtnText: { color: '#fff', fontSize: 11, fontWeight: 'bold' },
+  deleteBtn: { backgroundColor: '#ff6b6b', borderRadius: 6, padding: 6, marginLeft: 6, alignItems: 'center' },
+  deleteBtnText: { color: '#fff', fontSize: 11, fontWeight: 'bold' },
   empty: { textAlign: 'center', marginTop: 40, color: '#999' },
   fab: { backgroundColor: '#2d6a4f', margin: 16, padding: 16, borderRadius: 12, alignItems: 'center' },
   fabText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },

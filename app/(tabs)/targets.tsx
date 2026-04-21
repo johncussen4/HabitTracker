@@ -75,10 +75,10 @@ export default function TargetsScreen() {
   };
 
   const getStatus = (progress: number, goal: number) => {
-    if (progress >= goal) return { label: '✅ Achieved!', colour: '#2d6a4f' };
-    if (progress >= goal * 0.7) return { label: '🔥 On track', colour: '#f4a261' };
-    return { label: '⚠️ Behind', colour: '#e63946' };
-  };
+  if (progress >= goal) return { label: 'Achieved!', colour: '#2d6a4f' };
+  if (progress >= goal * 0.7) return { label: 'On Track', colour: '#f4a261' };
+  return { label: 'Behind', colour: '#e63946' };
+};
 
   return (
     <View style={styles.container}>
@@ -92,11 +92,11 @@ export default function TargetsScreen() {
             <View style={styles.card}>
               <View style={styles.cardHeader}>
                 <Text style={styles.habitName}>{item.habitName}</Text>
-                <TouchableOpacity onPress={() => deleteTarget(item.id)}>
-                  <Text style={styles.btn}>🗑️</Text>
+                <TouchableOpacity style={styles.deleteBtn} onPress={() => deleteTarget(item.id)}>
+                  <Text style={styles.deleteBtnText}>Delete</Text>
                 </TouchableOpacity>
               </View>
-              <Text style={styles.goal}>🎯 {item.goalCount} times {item.period}</Text>
+              <Text style={styles.goal}>{item.goalCount} times {item.period}</Text>
               <View style={styles.barBg}>
                 <View style={[styles.barFill, { width: `${rate * 100}%` as any, backgroundColor: status.colour }]} />
               </View>
@@ -183,4 +183,6 @@ const styles = StyleSheet.create({
   saveBtn: { backgroundColor: '#2d6a4f', padding: 16, borderRadius: 12, alignItems: 'center' },
   saveBtnText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
   cancel: { textAlign: 'center', color: '#999', marginTop: 8 },
+  deleteBtn: { backgroundColor: '#ff6b6b', borderRadius: 6, padding: 6, alignItems: 'center' },
+  deleteBtnText: { color: '#fff', fontSize: 11, fontWeight: 'bold' },
 });
